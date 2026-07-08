@@ -127,10 +127,16 @@ export default function SignIn() {
           <input
             type="password"
             required
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-8 focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
+
+          <div className="text-right mb-8">
+            <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-black transition">
+              Forgot password?
+            </Link>
+          </div>
 
           <button
             disabled={loading}

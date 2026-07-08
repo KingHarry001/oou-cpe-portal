@@ -250,5 +250,7 @@ export const mockSupabase = {
     signUp: async () => ({ data: { user: null }, error: authError }),
     signInWithOAuth: async () => ({ data: null, error: authError }),
     signOut: async () => ({ error: null }),
+    resetPasswordForEmail: async () => ({ data: {}, error: null }),
+    updateUser: async () => ({ data: { user: null }, error: null }),
   },
 };
