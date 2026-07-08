@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { IconBrandGoogle } from "@tabler/icons-react";
 import { supabase } from "../lib/supabaseClient";
+import GridBackground from "../components/ui/GridBackground";
 import oouCrest from "../assets/oou-crest.jpg";
 
 export default function SignUp() {
@@ -51,15 +52,8 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      <div className="relative bg-[#0A0A0A] text-white px-10 md:px-16 py-16 flex flex-col justify-between overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
+      <div className="relative bg-brand-black text-white px-10 md:px-16 py-16 flex flex-col justify-between overflow-hidden">
+        <GridBackground />
         <img
           src={oouCrest}
           alt=""

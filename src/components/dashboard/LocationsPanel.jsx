@@ -1,6 +1,7 @@
 // src/components/dashboard/LocationsPanel.jsx
 import { useState } from "react";
 import { IconMapPin } from "@tabler/icons-react";
+import EmptyState from "../ui/EmptyState";
 
 export default function LocationsPanel() {
   const [name, setName] = useState("");
@@ -30,10 +31,7 @@ export default function LocationsPanel() {
         </button>
       </form>
       {locations.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <IconMapPin size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-          <p className="text-sm text-gray-400">No locations added yet</p>
-        </div>
+        <EmptyState icon={IconMapPin} label="No locations added yet" />
       ) : (
         <ul className="space-y-2">
           {locations.map((loc, i) => (

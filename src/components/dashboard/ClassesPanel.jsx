@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { IconMapPin, IconClock } from "@tabler/icons-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../context/AuthContext";
+import EmptyState from "../ui/EmptyState";
 
 export default function ClassesPanel() {
   const { profile } = useAuth();
@@ -19,27 +20,25 @@ export default function ClassesPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadData = async () => {
+      // Both reads key off the lecturer's courses; fetch them in parallel
+      // rather than waiting on the course list just to build the classes
+      // query. The separate courses read still surfaces courses that have no
+      // classes yet (needed for the dropdown).
+      const [{ data: courseData }, { data: classData }] = await Promise.all([
+        supabase.from("courses").select("id, code, title").eq("lecturer_id", profile.id),
+        supabase
+          .from("classes")
+          .select("*, courses!inner(code, title)")
+          .eq("courses.lecturer_id", profile.id),
+      ]);
+
+      setCourses(courseData || []);
+      setClasses(classData || []);
+      setLoading(false);
+    };
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("lecturer_id", profile.id);
-
-    const { data: classData } = await supabase
-      .from("classes")
-      .select("*, courses(code, title)")
-      .in(
-        "course_id",
-        (courseData || []).map((c) => c.id),
-      );
-
-    setCourses(courseData || []);
-    setClasses(classData || []);
-    setLoading(false);
-  };
+  }, [profile.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -174,14 +173,7 @@ export default function ClassesPanel() {
       <div className="rounded-3xl border border-gray-100 p-8">
         <h2 className="text-lg font-medium mb-6">Your classes this week</h2>
         {classes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <IconClock
-              size={28}
-              className="text-gray-200 mb-3"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-gray-400">No classes added yet</p>
-          </div>
+          <EmptyState icon={IconClock} label="No classes added yet" />
         ) : (
           <ul className="space-y-3">
             {classes.map((c) => (

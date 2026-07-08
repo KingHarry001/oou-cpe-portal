@@ -1,15 +1,14 @@
 // src/pages/StudentDashboard.jsx
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
   IconLayoutGrid, IconClipboardList, IconCalendarCheck, IconMessageCircle,
-  IconNews, IconLogout, IconMapPin,
+  IconNews, IconMapPin,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabaseClient";
+import { useStudentSchedule } from "../hooks/useStudentSchedule";
+import DashboardLayout from "../components/dashboard/DashboardLayout";
 import AttendanceCheckIn from "../components/dashboard/AttendanceCheckIn";
-import MobileNav from "../components/dashboard/MobileNav";
-import oouCrest from "../assets/oou-crest.jpg";
+import GridBackground from "../components/ui/GridBackground";
 
 const TABS = [
   { key: "overview", label: "Weekly Overview", icon: IconLayoutGrid },
@@ -19,116 +18,42 @@ const TABS = [
   { key: "news", label: "News", icon: IconNews },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
-  exit: { opacity: 0, y: -8, transition: { duration: 0.2 } },
-};
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
   const [active, setActive] = useState("overview");
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  // Fetched once per level here so switching between the overview and
+  // attendance tabs doesn't refetch the same class list each time.
+  const { classes, loading } = useStudentSchedule(profile?.level);
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-white">
-      <MobileNav tabs={TABS} active={active} setActive={setActive} profile={profile} portalLabel="Department portal" />
-
-      <aside className="w-72 border-r border-gray-100 px-6 py-8 hidden lg:flex lg:flex-col justify-between shrink-0">
-        <div>
-          <div className="flex items-center gap-3 mb-10">
-            <img src={oouCrest} alt="OOU crest" className="h-10 w-10 object-contain" />
-            <div className="leading-tight">
-              <p className="font-medium text-sm">OOU CompEng</p>
-              <p className="text-xs text-gray-400">Department portal</p>
-            </div>
-          </div>
-
-          <nav className="flex flex-col gap-1">
-            {TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActive(key)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition text-left ${
-                  active === key ? "bg-[#0A0A0A] text-white" : "text-gray-500 hover:bg-gray-50"
-                }`}
-              >
-                <Icon size={18} strokeWidth={1.75} />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3 px-2 py-3 border-t border-gray-100">
-          <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
-            {profile?.full_name?.[0] || "?"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{profile?.full_name}</p>
-            <p className="text-xs text-gray-400 truncate">{profile?.email}</p>
-          </div>
-          <button onClick={signOut} className="text-gray-400 hover:text-gray-700 transition">
-            <IconLogout size={18} strokeWidth={1.75} />
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 w-full px-4 sm:px-6 md:px-12 py-6 sm:py-10 max-w-5xl">
-        <header className="hidden lg:flex items-center justify-between mb-10">
-          <h1 className="text-2xl font-medium">Student Dashboard</h1>
-        </header>
-
-        <AnimatePresence mode="wait">
-          <motion.div key={active} initial="hidden" animate="show" exit="exit" variants={fadeUp}>
-            {active === "overview" && <WeeklyOverview profile={profile} />}
-            {active === "assignments" && <AssignmentsView />}
-            {active === "attendance" && <AttendanceView profile={profile} />}
-            {active === "complaint" && <ComplaintForm />}
-            {active === "news" && <NewsView />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
-    </div>
+    <DashboardLayout
+      tabs={TABS}
+      active={active}
+      setActive={setActive}
+      portalLabel="Department portal"
+      title="Student Dashboard"
+    >
+      {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} />}
+      {active === "assignments" && <AssignmentsView />}
+      {active === "attendance" && <AttendanceView classes={classes} loading={loading} />}
+      {active === "complaint" && <ComplaintForm />}
+      {active === "news" && <NewsView />}
+    </DashboardLayout>
   );
 }
 
-function WeeklyOverview({ profile }) {
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
+function WeeklyOverview({ profile, classes, loading }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
-  useEffect(() => {
-    if (!profile?.level) return;
-    loadSchedule();
-  }, [profile]);
-
-  const loadSchedule = async () => {
-    const { data } = await supabase
-      .from("classes")
-      .select("*, courses!inner(code, title, level)")
-      .eq("courses.level", profile.level);
-    setClasses(data || []);
-    setLoading(false);
-  };
 
   const byDay = (day) => classes.filter((c) => c.day === day);
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <div className="relative bg-[#0A0A0A] text-white rounded-3xl p-6 sm:p-10 overflow-hidden w-full">
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
+      <div className="relative bg-brand-black text-white rounded-3xl p-6 sm:p-10 overflow-hidden w-full">
+        <GridBackground size={40} />
         <p className="relative text-sm text-white/40 mb-2">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </p>
@@ -158,7 +83,7 @@ function WeeklyOverview({ profile }) {
             <p className="text-sm text-gray-400">Loading...</p>
           ) : (
             <div className="space-y-4">
-              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+              {WEEKDAYS.map((day) => (
                 <div key={day} className="flex items-start justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
                   <p className="text-xs font-medium text-gray-400 tracking-wide w-24 pt-0.5">{day.toUpperCase()}</p>
                   <div className="flex-1 text-right">
@@ -199,22 +124,7 @@ function AssignmentsView() {
   );
 }
 
-function AttendanceView({ profile }) {
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!profile?.level) return;
-    supabase
-      .from("classes")
-      .select("*, courses!inner(code, title, level)")
-      .eq("courses.level", profile.level)
-      .then(({ data }) => {
-        setClasses(data || []);
-        setLoading(false);
-      });
-  }, [profile]);
-
+function AttendanceView({ classes, loading }) {
   if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
 
   if (classes.length === 0) {

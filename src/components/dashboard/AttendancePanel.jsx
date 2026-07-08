@@ -3,6 +3,7 @@ import { useState } from "react";
 import { IconCalendarCheck } from "@tabler/icons-react";
 import { supabase } from "../../lib/supabaseClient";
 import LiveAttendanceCount from "./LiveAttendanceCount";
+import EmptyState from "../ui/EmptyState";
 
 export default function AttendancePanel() {
   const [form, setForm] = useState({
@@ -116,13 +117,8 @@ export default function AttendancePanel() {
       {session ? (
         <LiveAttendanceCount session={session} totalStudents={enrolledCount} />
       ) : (
-        <div className="rounded-3xl border border-gray-100 p-10 max-w-lg flex flex-col items-center text-center">
-          <IconCalendarCheck
-            size={28}
-            className="text-gray-200 mb-3"
-            strokeWidth={1.5}
-          />
-          <p className="text-sm text-gray-400">No session open right now</p>
+        <div className="rounded-3xl border border-gray-100 max-w-lg">
+          <EmptyState icon={IconCalendarCheck} label="No session open right now" />
         </div>
       )}
     </div>

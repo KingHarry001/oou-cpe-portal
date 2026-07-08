@@ -1,5 +1,6 @@
 // src/dev/DevAuthOverride.jsx
 import { AuthContext } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 
 const MOCK_PROFILES = {
   student: { id: "dev-student", full_name: "King Harrison", email: "king@oouagoiwoye.edu.ng", role: "student", status: "active", level: "200" },
@@ -12,6 +13,7 @@ export default function DevAuthOverride({ role, children }) {
     session: { user: { id: MOCK_PROFILES[role].id } },
     profile: MOCK_PROFILES[role],
     loading: false,
+    signOut: () => supabase.auth.signOut(),
   };
 
   return <AuthContext.Provider value={fakeValue}>{children}</AuthContext.Provider>;

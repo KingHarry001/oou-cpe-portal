@@ -1,6 +1,7 @@
 // src/components/dashboard/ComplaintsPanel.jsx
 import { useState } from "react";
 import { IconMessageCircle } from "@tabler/icons-react";
+import EmptyState from "../ui/EmptyState";
 
 const MOCK_COMPLAINTS = [
   { id: 1, student: "Ada Lovelace", course: "CPE 301", subject: "Missing grade", status: "open" },
@@ -20,10 +21,7 @@ export default function ComplaintsPanel() {
     <div className="grid md:grid-cols-[340px_1fr] gap-6">
       <div className="rounded-3xl border border-gray-100 divide-y divide-gray-50 overflow-hidden">
         {complaints.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-            <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-gray-400">No complaints yet</p>
-          </div>
+          <EmptyState icon={IconMessageCircle} label="No complaints yet" className="py-16 px-6" />
         ) : (
           complaints.map((c) => (
             <button
@@ -49,10 +47,7 @@ export default function ComplaintsPanel() {
 
       <div className="rounded-3xl border border-gray-100 p-8">
         {!selected ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-gray-400">Select a complaint to view details</p>
-          </div>
+          <EmptyState icon={IconMessageCircle} label="Select a complaint to view details" className="py-16" />
         ) : (
           <div className="space-y-5">
             <div>

@@ -1,6 +1,7 @@
 // src/components/dashboard/AnnouncementsPanel.jsx
 import { useState } from "react";
 import { IconSpeakerphone } from "@tabler/icons-react";
+import EmptyState from "../ui/EmptyState";
 
 export default function AnnouncementsPanel() {
   const [form, setForm] = useState({ type: "announcement", title: "", body: "" });
@@ -64,10 +65,7 @@ export default function AnnouncementsPanel() {
       <div className="rounded-3xl border border-gray-100 p-8">
         <h2 className="text-lg font-medium mb-6">Recent posts</h2>
         {posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <IconSpeakerphone size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-gray-400">Nothing published yet</p>
-          </div>
+          <EmptyState icon={IconSpeakerphone} label="Nothing published yet" />
         ) : (
           <ul className="space-y-3">
             {posts.map((p) => (

@@ -1,6 +1,7 @@
 // src/components/dashboard/ResourcesPanel.jsx
 import { useState } from "react";
 import { IconFiles } from "@tabler/icons-react";
+import EmptyState from "../ui/EmptyState";
 
 export default function ResourcesPanel() {
   const [form, setForm] = useState({ course: "", type: "course_outline", file: null });
@@ -69,10 +70,7 @@ export default function ResourcesPanel() {
       <div className="rounded-3xl border border-gray-100 p-8">
         <h2 className="text-lg font-medium mb-6">Uploaded resources</h2>
         {resources.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <IconFiles size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-gray-400">Nothing uploaded yet</p>
-          </div>
+          <EmptyState icon={IconFiles} label="Nothing uploaded yet" />
         ) : (
           <ul className="space-y-3">
             {resources.map((r) => (
