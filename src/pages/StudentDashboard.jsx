@@ -272,25 +272,29 @@ function NewsView() {
   }
 
   return (
-    <div className="grid sm:grid-cols-2 gap-6">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {news.map((n) => (
         <article key={n.id} className="rounded-3xl border border-gray-100 overflow-hidden flex flex-col">
-          <div className="aspect-[16/9] bg-gray-100 shrink-0">
+          <div className="aspect-[16/10] bg-gray-100 shrink-0 overflow-hidden">
             {n.image_url ? (
               <img src={n.image_url} alt="" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <IconNews size={28} className="text-gray-300" strokeWidth={1.5} />
+                <IconNews size={26} className="text-gray-300" strokeWidth={1.5} />
               </div>
             )}
           </div>
-          <div className="p-6 flex-1">
-            <span className="text-xs uppercase tracking-wide text-brand-greenDark font-medium">{n.type}</span>
-            <h3 className="text-base font-medium mt-1">{n.title}</h3>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">{n.body}</p>
-            <p className="text-xs text-gray-400 mt-4">
-              {new Date(n.created_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
-            </p>
+          <div className="p-5 flex flex-col flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] uppercase tracking-wide font-medium text-brand-greenDark bg-brand-green/10 rounded-full px-2 py-0.5">
+                {n.type}
+              </span>
+              <span className="text-xs text-gray-400">
+                {new Date(n.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+              </span>
+            </div>
+            <h3 className="text-base font-medium leading-snug line-clamp-2 min-h-[2.75rem]">{n.title}</h3>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-3 min-h-[3.75rem]">{n.body}</p>
           </div>
         </article>
       ))}
