@@ -75,16 +75,7 @@ export default function Footer() {
         <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
           <p>© 2026 Olabisi Onabanjo University · Department of Computer Engineering</p>
           <p className="text-center md:text-right">
-            SIWES project · 2024/25 session · Built by{" "}
-            
-            <a  href="https://www.harrisonking.com.ng"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-600 hover:text-black underline underline-offset-2 transition"
-            >
-              Harrison King
-            </a>{" "}
-            and team
+            SIWES project · 2024/25 session · Built by the frontend team
           </p>
         </div>
       </div>
