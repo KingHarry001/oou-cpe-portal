@@ -62,14 +62,39 @@ const db = {
     { id: "ann-3", type: "insight", title: "Why FPGAs matter for your final-year project", body: "A short read on how reconfigurable hardware is shaping modern embedded systems and where to start experimenting.", image_url: null, created_at: iso(Date.now() - 5 * 864e5) },
     { id: "ann-6", type: "insight", title: "Getting the most out of the attendance system", body: "Tips on checking in reliably during class windows and keeping your attendance record clean throughout the semester.", image_url: null, created_at: iso(Date.now() - 6 * 864e5) },
   ],
+  complaints: [
+    { id: "cmp-1", student_id: "stu-2", lecturer_id: "dev-lecturer", course_id: "crs-1", subject: "Missing attendance mark", message: "I attended the CPE 201 class on Monday but my attendance wasn't recorded.", status: "open", reply: null, created_at: iso(Date.now() - 1 * 864e5) },
+    { id: "cmp-2", student_id: "dev-student", lecturer_id: "dev-lecturer", course_id: "crs-2", subject: "Assignment clarification", message: "Could you clarify the expected scope of the flip-flop lab report?", status: "open", reply: null, created_at: iso(Date.now() - 2 * 864e5) },
+    { id: "cmp-3", student_id: "stu-3", lecturer_id: "dev-lecturer", course_id: null, subject: "CA score dispute", message: "I believe my continuous-assessment score was recorded incorrectly.", status: "resolved", reply: "Reviewed and corrected — thanks for flagging it.", created_at: iso(Date.now() - 5 * 864e5) },
+  ],
 };
 
-// classes and assignments both carry a joined `courses` object in the real
-// queries the app runs.
-const COURSE_JOIN_TABLES = ["classes", "assignments"];
-const hydrateCourse = (row) => ({ ...row, courses: db.courses.find((c) => c.id === row.course_id) || null });
-const needsCourseJoin = (table, select, filters) =>
-  COURSE_JOIN_TABLES.includes(table) && (/courses/.test(select) || filters.some(([, col]) => col.startsWith("courses.")));
+// Foreign-table joins the app requests, per table. The key matches the alias
+// used in the select string, e.g. "student:users!student_id(...)" -> "student",
+// or the bare table name, e.g. "courses(code)" -> "courses".
+const JOINS = {
+  classes: [{ fk: "course_id", src: "courses", key: "courses" }],
+  assignments: [{ fk: "course_id", src: "courses", key: "courses" }],
+  complaints: [
+    { fk: "student_id", src: "users", key: "student" },
+    { fk: "lecturer_id", src: "users", key: "lecturer" },
+    { fk: "course_id", src: "courses", key: "courses" },
+  ],
+};
+const hydrate = (table, row) => {
+  const joins = JOINS[table];
+  if (!joins) return row;
+  const out = { ...row };
+  joins.forEach((j) => {
+    out[j.key] = db[j.src].find((r) => r.id === row[j.fk]) || null;
+  });
+  return out;
+};
+const needsJoin = (table, select, filters) => {
+  const joins = JOINS[table];
+  if (!joins) return false;
+  return joins.some((j) => select.includes(j.key)) || filters.some(([, col]) => col.includes("."));
+};
 
 const readCol = (row, col) => (col.includes(".") ? col.split(".").reduce((o, k) => o?.[k], row) : row[col]);
 
@@ -154,7 +179,7 @@ class MockQuery {
       const inserted = this._rows.map((r) => ({ id: uuid(), ...r }));
       store.push(...inserted);
       inserted.forEach((r) => emitInsert(this.table, r));
-      const shaped = COURSE_JOIN_TABLES.includes(this.table) ? inserted.map(hydrateCourse) : inserted;
+      const shaped = JOINS[this.table] ? inserted.map((r) => hydrate(this.table, r)) : inserted;
       const one = shaped[0];
       return this._result(this._single || this._maybe ? one : shaped);
     }
@@ -165,7 +190,7 @@ class MockQuery {
     }
 
     // select
-    let rows = needsCourseJoin(this.table, this._select, this.filters) ? store.map(hydrateCourse) : store.slice();
+    let rows = needsJoin(this.table, this._select, this.filters) ? store.map((r) => hydrate(this.table, r)) : store.slice();
     rows = applyFilters(rows, this.filters);
 
     if (this._head || this._count) return this._result(this._head ? null : rows, null, rows.length);

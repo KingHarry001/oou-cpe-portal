@@ -126,3 +126,27 @@ create policy "admin manages announcements" on announcements
   for all using (
     exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
   );
+
+
+create table complaints (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references users(id) on delete cascade,
+  lecturer_id uuid not null references users(id) on delete cascade,
+  course_id uuid references courses(id) on delete set null,
+  subject text not null,
+  message text not null,
+  reply text,
+  status text not null check (status in ('open', 'resolved')) default 'open',
+  created_at timestamptz default now()
+);
+
+alter table complaints enable row level security;
+
+create policy "student manages own complaints" on complaints
+  for all using (auth.uid() = student_id) with check (auth.uid() = student_id);
+
+create policy "lecturer reads complaints sent to them" on complaints
+  for select using (auth.uid() = lecturer_id);
+
+create policy "lecturer replies to own complaints" on complaints
+  for update using (auth.uid() = lecturer_id);

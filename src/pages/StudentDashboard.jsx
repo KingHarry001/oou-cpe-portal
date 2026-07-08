@@ -1,10 +1,11 @@
 // src/pages/StudentDashboard.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconLayoutGrid, IconClipboardList, IconCalendarCheck, IconMessageCircle,
   IconNews, IconMapPin,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import { useStudentSchedule } from "../hooks/useStudentSchedule";
 import { useStudentAssignments } from "../hooks/useStudentAssignments";
 import { useNews } from "../hooks/useNews";
@@ -41,7 +42,7 @@ export default function StudentDashboard() {
       {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} assignments={assignments} />}
       {active === "assignments" && <AssignmentsView assignments={assignments} loading={assignmentsLoading} />}
       {active === "attendance" && <AttendanceView classes={classes} loading={loading} />}
-      {active === "complaint" && <ComplaintForm />}
+      {active === "complaint" && <ComplaintForm profile={profile} />}
       {active === "news" && <NewsView />}
     </DashboardLayout>
   );
@@ -203,33 +204,114 @@ function AttendanceView({ classes, loading }) {
   );
 }
 
-function ComplaintForm() {
+function ComplaintForm({ profile }) {
+  const [lecturers, setLecturers] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [mine, setMine] = useState([]);
+  const [form, setForm] = useState({ lecturerId: "", courseId: "", subject: "", message: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    let active = true;
+    const load = async () => {
+      const [{ data: lecs }, { data: crs }, { data: myComplaints }] = await Promise.all([
+        supabase.from("users").select("id, full_name").eq("role", "lecturer"),
+        supabase.from("courses").select("id, code, title").eq("level", profile.level),
+        supabase
+          .from("complaints")
+          .select("*, lecturer:users!lecturer_id(full_name), courses(code)")
+          .eq("student_id", profile.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (!active) return;
+      setLecturers(lecs || []);
+      setCourses(crs || []);
+      setMine(myComplaints || []);
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, [profile?.id, profile?.level]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!form.lecturerId || !form.subject.trim() || !form.message.trim()) {
+      setError("Pick a lecturer and fill in the subject and message.");
+      return;
+    }
+    setSaving(true);
+    const { data, error: insertError } = await supabase
+      .from("complaints")
+      .insert({
+        student_id: profile.id,
+        lecturer_id: form.lecturerId,
+        course_id: form.courseId || null,
+        subject: form.subject,
+        message: form.message,
+        status: "open",
+      })
+      .select("*, lecturer:users!lecturer_id(full_name), courses(code)")
+      .single();
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setMine([data, ...mine]);
+    setForm({ lecturerId: "", courseId: "", subject: "", message: "" });
+  };
+
   return (
     <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-      <div className="rounded-3xl border border-gray-100 p-6 sm:p-8 space-y-5">
+      <form onSubmit={handleSubmit} className="rounded-3xl border border-gray-100 p-6 sm:p-8 space-y-5">
         <div>
           <h2 className="text-lg font-medium">Submit a complaint</h2>
           <p className="text-sm text-gray-400">Send an official message to a lecturer</p>
         </div>
 
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{error}</p>}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium block mb-2">Lecturer</label>
-            <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm">
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+              value={form.lecturerId}
+              onChange={(e) => setForm({ ...form, lecturerId: e.target.value })}
+            >
               <option value="">Select lecturer</option>
+              {lecturers.map((l) => (
+                <option key={l.id} value={l.id}>{l.full_name}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium block mb-2">Course (optional)</label>
-            <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm">
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+              value={form.courseId}
+              onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+            >
               <option value="">Select course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+              ))}
             </select>
           </div>
         </div>
 
         <div>
           <label className="text-sm font-medium block mb-2">Subject</label>
-          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm" placeholder="Short summary" />
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+            placeholder="Short summary"
+            value={form.subject}
+            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+          />
         </div>
 
         <div>
@@ -237,21 +319,53 @@ function ComplaintForm() {
           <textarea
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-32"
             placeholder="Describe your concern..."
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
           />
         </div>
 
-        <button className="bg-brand-green text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-brand-greenDark transition">
-          Send complaint
+        <button
+          disabled={saving}
+          className="bg-brand-green text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-brand-greenDark transition disabled:opacity-50"
+        >
+          {saving ? "Sending..." : "Send complaint"}
         </button>
-      </div>
+      </form>
 
       <div className="rounded-3xl border border-gray-100 p-6 sm:p-8">
         <h2 className="text-lg font-medium">My complaints</h2>
         <p className="text-sm text-gray-400 mb-6">Recent submissions and their status</p>
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-          <p className="text-sm text-gray-400">Nothing submitted yet</p>
-        </div>
+        {mine.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
+            <p className="text-sm text-gray-400">Nothing submitted yet</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {mine.map((c) => (
+              <li key={c.id} className="border border-gray-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium">{c.subject}</p>
+                  <span
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                      c.status === "resolved" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {c.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  To {c.lecturer?.full_name || "—"}{c.courses?.code ? ` · ${c.courses.code}` : ""}
+                </p>
+                {c.reply && (
+                  <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-xl px-3 py-2">
+                    Reply: {c.reply}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
