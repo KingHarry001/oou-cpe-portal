@@ -56,8 +56,11 @@ const db = {
   // resolve under Vite. Leave null to show the card's image placeholder.
   announcements: [
     { id: "ann-1", type: "news", title: "Departmental Week 2026 announced", body: "The Department of Computer Engineering will hold its annual week from March 3–7, featuring project exhibitions, a hackathon and an alumni mixer.", image_url: "/src/assets/group-photo-1.jpeg", created_at: iso(Date.now() - 1 * 864e5) },
+    { id: "ann-4", type: "announcement", title: "Guest lecture: Embedded systems in robotics", body: "Engr. Dr. Balogun of the Nigerian Society of Engineers will speak on real-time embedded control this Thursday, 2pm, Engr. Lecture Hall 1.", image_url: "/src/assets/group-photo-4.jpg", created_at: iso(Date.now() - 2 * 864e5) },
     { id: "ann-2", type: "announcement", title: "Second-semester registration now open", body: "Course registration for the second semester closes on February 20. Late registration attracts a penalty — register early through the portal.", image_url: "/src/assets/group-photo-2.jpg", created_at: iso(Date.now() - 3 * 864e5) },
+    { id: "ann-5", type: "news", title: "CPE students win national hardware challenge", body: "A 300-level team placed first at the inter-university embedded design challenge with an IoT-based campus energy monitor.", image_url: "/src/assets/group-photo-3.jpeg", created_at: iso(Date.now() - 4 * 864e5) },
     { id: "ann-3", type: "insight", title: "Why FPGAs matter for your final-year project", body: "A short read on how reconfigurable hardware is shaping modern embedded systems and where to start experimenting.", image_url: null, created_at: iso(Date.now() - 5 * 864e5) },
+    { id: "ann-6", type: "insight", title: "Getting the most out of the attendance system", body: "Tips on checking in reliably during class windows and keeping your attendance record clean throughout the semester.", image_url: null, created_at: iso(Date.now() - 6 * 864e5) },
   ],
 };
 
