@@ -1,11 +1,14 @@
 // src/components/dashboard/AttendancePanel.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconCalendarCheck } from "@tabler/icons-react";
 import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
 import LiveAttendanceCount from "./LiveAttendanceCount";
 import EmptyState from "../ui/EmptyState";
 
 export default function AttendancePanel() {
+  const { profile } = useAuth();
+  const [classes, setClasses] = useState([]);
   const [form, setForm] = useState({
     classId: "",
     type: "attendance",
@@ -15,6 +18,17 @@ export default function AttendancePanel() {
   const [session, setSession] = useState(null);
   const [enrolledCount, setEnrolledCount] = useState(0);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      const { data } = await supabase
+        .from("classes")
+        .select("id, day, start_time, courses!inner(code, title, lecturer_id)")
+        .eq("courses.lecturer_id", profile.id);
+      setClasses(data || []);
+    };
+    loadClasses();
+  }, [profile.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -68,6 +82,11 @@ export default function AttendancePanel() {
             onChange={(e) => setForm({ ...form, classId: e.target.value })}
           >
             <option value="">Select class</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.courses.code} · {c.day} {c.start_time}
+              </option>
+            ))}
           </select>
         </div>
 

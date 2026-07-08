@@ -6,6 +6,8 @@ import SignUp from "./pages/SignUp";
 import StudentDashboard from "./pages/StudentDashboard";
 import LecturerDashboard from "./pages/LecturerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import Banned from "./pages/Banned";
+import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DevAuthOverride from "./dev/DevAuthOverride";
 
@@ -16,6 +18,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/banned" element={<Banned />} />
 
         <Route
           path="/student"
@@ -70,6 +73,8 @@ export default function App() {
             />
           </>
         )}
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
