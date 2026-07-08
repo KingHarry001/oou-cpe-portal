@@ -1,11 +1,14 @@
 // src/pages/StudentDashboard.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconLayoutGrid, IconClipboardList, IconCalendarCheck, IconMessageCircle,
   IconNews, IconMapPin,
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import { useStudentSchedule } from "../hooks/useStudentSchedule";
+import { useStudentAssignments } from "../hooks/useStudentAssignments";
+import { useNews } from "../hooks/useNews";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import AttendanceCheckIn from "../components/dashboard/AttendanceCheckIn";
 import GridBackground from "../components/ui/GridBackground";
@@ -24,8 +27,9 @@ export default function StudentDashboard() {
   const { profile } = useAuth();
   const [active, setActive] = useState("overview");
   // Fetched once per level here so switching between the overview and
-  // attendance tabs doesn't refetch the same class list each time.
+  // attendance tabs doesn't refetch the same list each time.
   const { classes, loading } = useStudentSchedule(profile?.level);
+  const { assignments, loading: assignmentsLoading } = useStudentAssignments(profile?.level);
 
   return (
     <DashboardLayout
@@ -35,20 +39,22 @@ export default function StudentDashboard() {
       portalLabel="Department portal"
       title="Student Dashboard"
     >
-      {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} />}
-      {active === "assignments" && <AssignmentsView />}
+      {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} assignments={assignments} />}
+      {active === "assignments" && <AssignmentsView assignments={assignments} loading={assignmentsLoading} />}
       {active === "attendance" && <AttendanceView classes={classes} loading={loading} />}
-      {active === "complaint" && <ComplaintForm />}
+      {active === "complaint" && <ComplaintForm profile={profile} />}
       {active === "news" && <NewsView />}
     </DashboardLayout>
   );
 }
 
-function WeeklyOverview({ profile, classes, loading }) {
+function WeeklyOverview({ profile, classes, loading, assignments }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const byDay = (day) => classes.filter((c) => c.day === day);
+  const pending = assignments.filter((a) => !a.deadline || new Date(a.deadline) >= new Date());
+  const upcoming = pending.slice(0, 4);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -63,7 +69,7 @@ function WeeklyOverview({ profile, classes, loading }) {
         <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Classes this week", value: String(classes.length) },
-            { label: "Pending assignments", value: "0" },
+            { label: "Pending assignments", value: String(pending.length) },
             { label: "Department", value: "Comp. Eng." },
             { label: "Level", value: profile?.level || "—" },
           ].map((s) => (
@@ -106,20 +112,65 @@ function WeeklyOverview({ profile, classes, loading }) {
         <div className="rounded-3xl border border-gray-100 p-6 sm:p-8">
           <h3 className="text-lg font-medium">Upcoming deadlines</h3>
           <p className="text-sm text-gray-400 mb-6">Next 4 assignments</p>
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <p className="text-sm text-gray-400">No upcoming deadlines</p>
-          </div>
+          {upcoming.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-gray-400">No upcoming deadlines</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {upcoming.map((a) => (
+                <li key={a.id} className="border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                  <p className="text-sm font-medium">{a.courses.code} · {a.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Due {a.deadline ? new Date(a.deadline).toLocaleDateString([], { month: "short", day: "numeric" }) : "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function AssignmentsView() {
+function AssignmentsView({ assignments, loading }) {
+  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+
+  if (assignments.length === 0) {
+    return (
+      <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
+        <IconClipboardList size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
+        <p className="text-gray-400">No assignments yet</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
-      <IconClipboardList size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
-      <p className="text-gray-400">No assignments yet</p>
+    <div className="space-y-4">
+      {assignments.map((a) => {
+        const overdue = a.deadline && new Date(a.deadline) < new Date();
+        return (
+          <div key={a.id} className="rounded-3xl border border-gray-100 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs text-brand-greenDark font-medium">{a.courses.code}</p>
+                <p className="text-sm font-medium mt-0.5">{a.title}</p>
+                {a.description && <p className="text-sm text-gray-500 mt-2 leading-relaxed">{a.description}</p>}
+              </div>
+              <span
+                className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${
+                  overdue ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                }`}
+              >
+                {a.deadline
+                  ? `${overdue ? "Closed" : "Due"} ${new Date(a.deadline).toLocaleDateString([], { month: "short", day: "numeric" })}`
+                  : "No deadline"}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -153,33 +204,114 @@ function AttendanceView({ classes, loading }) {
   );
 }
 
-function ComplaintForm() {
+function ComplaintForm({ profile }) {
+  const [lecturers, setLecturers] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [mine, setMine] = useState([]);
+  const [form, setForm] = useState({ lecturerId: "", courseId: "", subject: "", message: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    let active = true;
+    const load = async () => {
+      const [{ data: lecs }, { data: crs }, { data: myComplaints }] = await Promise.all([
+        supabase.from("users").select("id, full_name").eq("role", "lecturer"),
+        supabase.from("courses").select("id, code, title").eq("level", profile.level),
+        supabase
+          .from("complaints")
+          .select("*, lecturer:users!lecturer_id(full_name), courses(code)")
+          .eq("student_id", profile.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (!active) return;
+      setLecturers(lecs || []);
+      setCourses(crs || []);
+      setMine(myComplaints || []);
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, [profile?.id, profile?.level]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!form.lecturerId || !form.subject.trim() || !form.message.trim()) {
+      setError("Pick a lecturer and fill in the subject and message.");
+      return;
+    }
+    setSaving(true);
+    const { data, error: insertError } = await supabase
+      .from("complaints")
+      .insert({
+        student_id: profile.id,
+        lecturer_id: form.lecturerId,
+        course_id: form.courseId || null,
+        subject: form.subject,
+        message: form.message,
+        status: "open",
+      })
+      .select("*, lecturer:users!lecturer_id(full_name), courses(code)")
+      .single();
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setMine([data, ...mine]);
+    setForm({ lecturerId: "", courseId: "", subject: "", message: "" });
+  };
+
   return (
     <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-      <div className="rounded-3xl border border-gray-100 p-6 sm:p-8 space-y-5">
+      <form onSubmit={handleSubmit} className="rounded-3xl border border-gray-100 p-6 sm:p-8 space-y-5">
         <div>
           <h2 className="text-lg font-medium">Submit a complaint</h2>
           <p className="text-sm text-gray-400">Send an official message to a lecturer</p>
         </div>
 
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{error}</p>}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium block mb-2">Lecturer</label>
-            <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm">
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+              value={form.lecturerId}
+              onChange={(e) => setForm({ ...form, lecturerId: e.target.value })}
+            >
               <option value="">Select lecturer</option>
+              {lecturers.map((l) => (
+                <option key={l.id} value={l.id}>{l.full_name}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="text-sm font-medium block mb-2">Course (optional)</label>
-            <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm">
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+              value={form.courseId}
+              onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+            >
               <option value="">Select course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+              ))}
             </select>
           </div>
         </div>
 
         <div>
           <label className="text-sm font-medium block mb-2">Subject</label>
-          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm" placeholder="Short summary" />
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+            placeholder="Short summary"
+            value={form.subject}
+            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+          />
         </div>
 
         <div>
@@ -187,31 +319,99 @@ function ComplaintForm() {
           <textarea
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-32"
             placeholder="Describe your concern..."
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
           />
         </div>
 
-        <button className="bg-brand-green text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-brand-greenDark transition">
-          Send complaint
+        <button
+          disabled={saving}
+          className="bg-brand-green text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-brand-greenDark transition disabled:opacity-50"
+        >
+          {saving ? "Sending..." : "Send complaint"}
         </button>
-      </div>
+      </form>
 
       <div className="rounded-3xl border border-gray-100 p-6 sm:p-8">
         <h2 className="text-lg font-medium">My complaints</h2>
         <p className="text-sm text-gray-400 mb-6">Recent submissions and their status</p>
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-          <p className="text-sm text-gray-400">Nothing submitted yet</p>
-        </div>
+        {mine.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <IconMessageCircle size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
+            <p className="text-sm text-gray-400">Nothing submitted yet</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {mine.map((c) => (
+              <li key={c.id} className="border border-gray-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium">{c.subject}</p>
+                  <span
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                      c.status === "resolved" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {c.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  To {c.lecturer?.full_name || "—"}{c.courses?.code ? ` · ${c.courses.code}` : ""}
+                </p>
+                {c.reply && (
+                  <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-xl px-3 py-2">
+                    Reply: {c.reply}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
 }
 
 function NewsView() {
+  const { news, loading } = useNews();
+
+  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+
+  if (news.length === 0) {
+    return (
+      <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
+        <IconNews size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
+        <p className="text-gray-400">No news yet</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
-      <IconNews size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
-      <p className="text-gray-400">No news yet</p>
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {news.map((n) => (
+        <article key={n.id} className="rounded-3xl border border-gray-100 overflow-hidden flex flex-col">
+          <div className="aspect-[16/10] bg-gray-100 shrink-0 overflow-hidden">
+            {n.image_url ? (
+              <img src={n.image_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <IconNews size={26} className="text-gray-300" strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+          <div className="p-5 flex flex-col flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] uppercase tracking-wide font-medium text-brand-greenDark bg-brand-green/10 rounded-full px-2 py-0.5">
+                {n.type}
+              </span>
+              <span className="text-xs text-gray-400">
+                {new Date(n.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+              </span>
+            </div>
+            <h3 className="text-base font-medium leading-snug line-clamp-2 min-h-[2.75rem]">{n.title}</h3>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-3 min-h-[3.75rem]">{n.body}</p>
+          </div>
+        </article>
+      ))}
     </div>
   );
 }

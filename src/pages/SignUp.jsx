@@ -1,9 +1,10 @@
 // src/pages/SignUp.jsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { IconBrandGoogle } from "@tabler/icons-react";
 import { supabase } from "../lib/supabaseClient";
+import { roleHome } from "../lib/roles";
 import GridBackground from "../components/ui/GridBackground";
 import oouCrest from "../assets/oou-crest.jpg";
 
@@ -12,6 +13,9 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Only lecturer/student can self-register; admins are provisioned separately.
+  const role = searchParams.get("role") === "lecturer" ? "lecturer" : "student";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +42,7 @@ export default function SignUp() {
       id: data.user.id,
       full_name: form.fullName,
       email: form.email,
-      role: "student",
+      role,
     });
 
     setLoading(false);
@@ -47,7 +51,15 @@ export default function SignUp() {
       return;
     }
 
-    navigate("/student");
+    navigate(roleHome(role));
+  };
+
+  const signInWithGoogle = async () => {
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (oauthError) setError(oauthError.message);
   };
 
   return (
@@ -94,7 +106,11 @@ export default function SignUp() {
           className="w-full max-w-sm"
         >
           <h2 className="text-3xl font-medium mb-2">Create your account</h2>
-          <p className="text-gray-500 mb-10">Sign up with your school email to get started.</p>
+          <p className="text-gray-500 mb-10">
+            {role === "lecturer"
+              ? "Sign up as a lecturer with your school email."
+              : "Sign up with your school email to get started."}
+          </p>
 
           <div className="flex bg-gray-100 rounded-full p-1 mb-8 text-sm font-medium">
             <Link to="/signin" className="flex-1 text-center py-2 text-gray-500">
@@ -151,6 +167,7 @@ export default function SignUp() {
 
           <button
             type="button"
+            onClick={signInWithGoogle}
             className="w-full border border-gray-200 rounded-full py-3.5 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition"
           >
             <IconBrandGoogle size={18} strokeWidth={1.5} />

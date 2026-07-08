@@ -46,6 +46,14 @@ export default function SignIn() {
     navigate(roleHome(profile?.role));
   };
 
+  const signInWithGoogle = async () => {
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (oauthError) setError(oauthError.message);
+  };
+
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
       {/* Dark info panel */}
@@ -139,6 +147,7 @@ export default function SignIn() {
 
           <button
             type="button"
+            onClick={signInWithGoogle}
             className="w-full border border-gray-200 rounded-full py-3.5 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition"
           >
             <IconBrandGoogle size={18} strokeWidth={1.5} />
