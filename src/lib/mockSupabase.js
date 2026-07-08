@@ -48,12 +48,18 @@ const db = {
   // Enrollment rows only feed the "x / total" denominator, so the shape barely
   // matters — seed 24 for CPE 201.
   enrollments: Array.from({ length: 24 }, (_, i) => ({ id: `enr-${i}`, class_id: "cls-1", student_id: `seed-${i}` })),
+  assignments: [
+    { id: "asn-1", course_id: "crs-1", title: "Assignment 1 — Nodal analysis", description: "Solve problems 1–8 from chapter 3.", deadline: iso(Date.now() + 3 * 864e5), created_at: iso(Date.now() - 2 * 864e5) },
+    { id: "asn-2", course_id: "crs-2", title: "Lab report — Flip-flops", description: "Write up the D/JK flip-flop lab.", deadline: iso(Date.now() + 7 * 864e5), created_at: iso(Date.now() - 1 * 864e5) },
+  ],
 };
 
-// classes carry a joined `courses` object in every real query the app runs.
-const hydrateClass = (row) => ({ ...row, courses: db.courses.find((c) => c.id === row.course_id) || null });
+// classes and assignments both carry a joined `courses` object in the real
+// queries the app runs.
+const COURSE_JOIN_TABLES = ["classes", "assignments"];
+const hydrateCourse = (row) => ({ ...row, courses: db.courses.find((c) => c.id === row.course_id) || null });
 const needsCourseJoin = (table, select, filters) =>
-  table === "classes" && (/courses/.test(select) || filters.some(([, col]) => col.startsWith("courses.")));
+  COURSE_JOIN_TABLES.includes(table) && (/courses/.test(select) || filters.some(([, col]) => col.startsWith("courses.")));
 
 const readCol = (row, col) => (col.includes(".") ? col.split(".").reduce((o, k) => o?.[k], row) : row[col]);
 
@@ -138,7 +144,7 @@ class MockQuery {
       const inserted = this._rows.map((r) => ({ id: uuid(), ...r }));
       store.push(...inserted);
       inserted.forEach((r) => emitInsert(this.table, r));
-      const shaped = this.table === "classes" ? inserted.map(hydrateClass) : inserted;
+      const shaped = COURSE_JOIN_TABLES.includes(this.table) ? inserted.map(hydrateCourse) : inserted;
       const one = shaped[0];
       return this._result(this._single || this._maybe ? one : shaped);
     }
@@ -149,7 +155,7 @@ class MockQuery {
     }
 
     // select
-    let rows = needsCourseJoin(this.table, this._select, this.filters) ? store.map(hydrateClass) : store.slice();
+    let rows = needsCourseJoin(this.table, this._select, this.filters) ? store.map(hydrateCourse) : store.slice();
     rows = applyFilters(rows, this.filters);
 
     if (this._head || this._count) return this._result(this._head ? null : rows, null, rows.length);

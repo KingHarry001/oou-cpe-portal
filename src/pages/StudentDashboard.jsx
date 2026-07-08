@@ -6,6 +6,7 @@ import {
 } from "@tabler/icons-react";
 import { useAuth } from "../context/AuthContext";
 import { useStudentSchedule } from "../hooks/useStudentSchedule";
+import { useStudentAssignments } from "../hooks/useStudentAssignments";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import AttendanceCheckIn from "../components/dashboard/AttendanceCheckIn";
 import GridBackground from "../components/ui/GridBackground";
@@ -24,8 +25,9 @@ export default function StudentDashboard() {
   const { profile } = useAuth();
   const [active, setActive] = useState("overview");
   // Fetched once per level here so switching between the overview and
-  // attendance tabs doesn't refetch the same class list each time.
+  // attendance tabs doesn't refetch the same list each time.
   const { classes, loading } = useStudentSchedule(profile?.level);
+  const { assignments, loading: assignmentsLoading } = useStudentAssignments(profile?.level);
 
   return (
     <DashboardLayout
@@ -35,8 +37,8 @@ export default function StudentDashboard() {
       portalLabel="Department portal"
       title="Student Dashboard"
     >
-      {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} />}
-      {active === "assignments" && <AssignmentsView />}
+      {active === "overview" && <WeeklyOverview profile={profile} classes={classes} loading={loading} assignments={assignments} />}
+      {active === "assignments" && <AssignmentsView assignments={assignments} loading={assignmentsLoading} />}
       {active === "attendance" && <AttendanceView classes={classes} loading={loading} />}
       {active === "complaint" && <ComplaintForm />}
       {active === "news" && <NewsView />}
@@ -44,11 +46,13 @@ export default function StudentDashboard() {
   );
 }
 
-function WeeklyOverview({ profile, classes, loading }) {
+function WeeklyOverview({ profile, classes, loading, assignments }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const byDay = (day) => classes.filter((c) => c.day === day);
+  const pending = assignments.filter((a) => !a.deadline || new Date(a.deadline) >= new Date());
+  const upcoming = pending.slice(0, 4);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -63,7 +67,7 @@ function WeeklyOverview({ profile, classes, loading }) {
         <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Classes this week", value: String(classes.length) },
-            { label: "Pending assignments", value: "0" },
+            { label: "Pending assignments", value: String(pending.length) },
             { label: "Department", value: "Comp. Eng." },
             { label: "Level", value: profile?.level || "—" },
           ].map((s) => (
@@ -106,20 +110,65 @@ function WeeklyOverview({ profile, classes, loading }) {
         <div className="rounded-3xl border border-gray-100 p-6 sm:p-8">
           <h3 className="text-lg font-medium">Upcoming deadlines</h3>
           <p className="text-sm text-gray-400 mb-6">Next 4 assignments</p>
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <p className="text-sm text-gray-400">No upcoming deadlines</p>
-          </div>
+          {upcoming.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <p className="text-sm text-gray-400">No upcoming deadlines</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {upcoming.map((a) => (
+                <li key={a.id} className="border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                  <p className="text-sm font-medium">{a.courses.code} · {a.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Due {a.deadline ? new Date(a.deadline).toLocaleDateString([], { month: "short", day: "numeric" }) : "—"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function AssignmentsView() {
+function AssignmentsView({ assignments, loading }) {
+  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+
+  if (assignments.length === 0) {
+    return (
+      <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
+        <IconClipboardList size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
+        <p className="text-gray-400">No assignments yet</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
-      <IconClipboardList size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
-      <p className="text-gray-400">No assignments yet</p>
+    <div className="space-y-4">
+      {assignments.map((a) => {
+        const overdue = a.deadline && new Date(a.deadline) < new Date();
+        return (
+          <div key={a.id} className="rounded-3xl border border-gray-100 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs text-brand-greenDark font-medium">{a.courses.code}</p>
+                <p className="text-sm font-medium mt-0.5">{a.title}</p>
+                {a.description && <p className="text-sm text-gray-500 mt-2 leading-relaxed">{a.description}</p>}
+              </div>
+              <span
+                className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${
+                  overdue ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                }`}
+              >
+                {a.deadline
+                  ? `${overdue ? "Closed" : "Due"} ${new Date(a.deadline).toLocaleDateString([], { month: "short", day: "numeric" })}`
+                  : "No deadline"}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
