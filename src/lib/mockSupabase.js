@@ -67,6 +67,15 @@ const db = {
     { id: "cmp-2", student_id: "dev-student", lecturer_id: "dev-lecturer", course_id: "crs-2", subject: "Assignment clarification", message: "Could you clarify the expected scope of the flip-flop lab report?", status: "open", reply: null, created_at: iso(Date.now() - 2 * 864e5) },
     { id: "cmp-3", student_id: "stu-3", lecturer_id: "dev-lecturer", course_id: null, subject: "CA score dispute", message: "I believe my continuous-assessment score was recorded incorrectly.", status: "resolved", reply: "Reviewed and corrected — thanks for flagging it.", created_at: iso(Date.now() - 5 * 864e5) },
   ],
+  locations: [
+    { id: "loc-1", name: "Engr. Lecture Hall 1", created_at: iso(Date.now() - 30 * 864e5) },
+    { id: "loc-2", name: "Engr. Lecture Hall 2", created_at: iso(Date.now() - 30 * 864e5) },
+    { id: "loc-3", name: "CPE Lab A", created_at: iso(Date.now() - 20 * 864e5) },
+  ],
+  resources: [
+    { id: "res-1", course_id: "crs-1", type: "course_outline", name: "CPE 201 course outline.pdf", created_at: iso(Date.now() - 10 * 864e5) },
+    { id: "res-2", course_id: "crs-2", type: "pdf", name: "Digital systems - lecture 3.pdf", created_at: iso(Date.now() - 4 * 864e5) },
+  ],
 };
 
 // Foreign-table joins the app requests, per table. The key matches the alias
@@ -75,6 +84,7 @@ const db = {
 const JOINS = {
   classes: [{ fk: "course_id", src: "courses", key: "courses" }],
   assignments: [{ fk: "course_id", src: "courses", key: "courses" }],
+  resources: [{ fk: "course_id", src: "courses", key: "courses" }],
   complaints: [
     { fk: "student_id", src: "users", key: "student" },
     { fk: "lecturer_id", src: "users", key: "lecturer" },

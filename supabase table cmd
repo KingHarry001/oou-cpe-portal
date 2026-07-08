@@ -150,3 +150,41 @@ create policy "lecturer reads complaints sent to them" on complaints
 
 create policy "lecturer replies to own complaints" on complaints
   for update using (auth.uid() = lecturer_id);
+
+
+create table locations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_at timestamptz default now()
+);
+
+alter table locations enable row level security;
+
+create policy "everyone reads locations" on locations
+  for select using (true);
+
+create policy "admin manages locations" on locations
+  for all using (
+    exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
+  );
+
+create table resources (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid not null references courses(id) on delete cascade,
+  type text not null check (type in ('course_outline', 'pdf')) default 'pdf',
+  name text not null,
+  created_at timestamptz default now()
+);
+
+alter table resources enable row level security;
+
+create policy "everyone reads resources" on resources
+  for select using (true);
+
+create policy "lecturer manages own course resources" on resources
+  for all using (
+    exists (
+      select 1 from courses c
+      where c.id = resources.course_id and c.lecturer_id = auth.uid()
+    )
+  );
