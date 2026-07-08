@@ -8,13 +8,19 @@ import {
 } from "@tabler/icons-react";
 import GridBackground from "../components/ui/GridBackground";
 import oouCrest from "../assets/oou-crest.jpg";
-import groupPhoto1 from "../assets/group-photo-1.jpeg";
-import groupPhoto2 from "../assets/group-photo-2.jpg";
-import groupPhoto3 from "../assets/group-photo-3.jpeg";
-import groupPhoto4 from "../assets/group-photo-4.jpg";
 import demoVideoThumb1 from "../assets/demo-thumb-1.jpg";
 import demoVideoThumb2 from "../assets/demo-thumb-2.jpeg";
 import Footer from "../components/Footer";
+
+// Campus photos for the gallery, picked up automatically from src/assets.
+// Excludes campus-01/02 (already used on the news cards). Add more
+// campus-NN.jpeg files and they appear here with no code change.
+const campusPhotos = Object.entries(
+  import.meta.glob("../assets/campus-*.jpeg", { eager: true, import: "default" })
+)
+  .filter(([path]) => !/campus-0[12]\.jpeg$/.test(path))
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, url]) => url);
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -236,28 +242,22 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      {/* Photo mosaic — much bigger rows */}
+      {/* Photo gallery */}
       <section className="max-w-6xl mx-auto px-8 mb-40">
-        <h2 className="text-4xl font-medium text-center mb-16">Life in the department</h2>
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 sm:grid-cols-2 grid-rows-2 sm:grid-rows-[380px_380px] gap-6"
-        >
-          {[groupPhoto1, groupPhoto2, groupPhoto3, groupPhoto4].map((photo, i) => (
-            <motion.img
-              key={i}
-              variants={fadeUp}
-              whileHover={{ scale: 1.03 }}
-              transition={{ duration: 0.5 }}
-              src={photo}
-              alt="Department life"
-              className="w-full h-64 sm:h-full object-cover rounded-[28px]"
-            />
+        <h2 className="text-4xl font-medium text-center mb-4">Life in the department</h2>
+        <p className="text-center text-gray-500 mb-16">Moments from the Computer Engineering community</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {campusPhotos.map((photo, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl aspect-square">
+              <img
+                src={photo}
+                alt="Department life"
+                loading="lazy"
+                className="w-full h-full object-cover hover:scale-105 transition duration-500"
+              />
+            </div>
           ))}
-        </motion.div>
+        </div>
       </section>
 
       {/* Testimonial — bigger, more presence */}
