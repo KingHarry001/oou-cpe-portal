@@ -1,16 +1,53 @@
 // src/components/dashboard/AnnouncementsPanel.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconSpeakerphone } from "@tabler/icons-react";
+import { supabase } from "../../lib/supabaseClient";
 import EmptyState from "../ui/EmptyState";
 
+const TYPES = [
+  { key: "announcement", label: "Announcement" },
+  { key: "news", label: "News" },
+  { key: "insight", label: "Insight" },
+];
+
 export default function AnnouncementsPanel() {
-  const [form, setForm] = useState({ type: "announcement", title: "", body: "" });
+  const [form, setForm] = useState({ type: "announcement", title: "", body: "", imageUrl: "" });
   const [posts, setPosts] = useState([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("announcements")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setPosts(data || []);
+    };
+    load();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setPosts([{ ...form, id: Date.now() }, ...posts]);
-    setForm({ type: form.type, title: "", body: "" });
+    setError("");
+
+    const { data, error: insertError } = await supabase
+      .from("announcements")
+      .insert({
+        type: form.type,
+        title: form.title,
+        body: form.body,
+        image_url: form.imageUrl || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    setPosts([data, ...posts]);
+    setForm({ type: form.type, title: "", body: "", imageUrl: "" });
   };
 
   return (
@@ -18,12 +55,12 @@ export default function AnnouncementsPanel() {
       <form onSubmit={handleSubmit} className="rounded-3xl border border-gray-100 p-8 space-y-5">
         <h2 className="text-lg font-medium">New post</h2>
 
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{error}</p>
+        )}
+
         <div className="flex gap-2">
-          {[
-            { key: "announcement", label: "Announcement" },
-            { key: "news", label: "News" },
-            { key: "insight", label: "Insight" },
-          ].map((t) => (
+          {TYPES.map((t) => (
             <button
               type="button"
               key={t.key}
@@ -57,6 +94,16 @@ export default function AnnouncementsPanel() {
           />
         </div>
 
+        <div>
+          <label className="text-sm font-medium block mb-2">Image URL (optional)</label>
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+            placeholder="https://…"
+            value={form.imageUrl}
+            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          />
+        </div>
+
         <button className="w-full bg-black text-white rounded-full py-3.5 text-sm font-medium hover:bg-gray-800 transition">
           Publish
         </button>
@@ -69,9 +116,18 @@ export default function AnnouncementsPanel() {
         ) : (
           <ul className="space-y-3">
             {posts.map((p) => (
-              <li key={p.id} className="border border-gray-100 rounded-2xl p-4">
-                <span className="text-xs uppercase text-brand-greenDark font-medium">{p.type}</span>
-                <p className="text-sm font-medium mt-1">{p.title}</p>
+              <li key={p.id} className="flex items-center gap-3 border border-gray-100 rounded-2xl p-4">
+                <div className="h-12 w-12 rounded-xl bg-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <IconSpeakerphone size={18} className="text-gray-300" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs uppercase text-brand-greenDark font-medium">{p.type}</span>
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                </div>
               </li>
             ))}
           </ul>

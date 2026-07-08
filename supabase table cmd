@@ -106,3 +106,23 @@ create policy "lecturer manages own course assignments" on assignments
       where c.id = assignments.course_id and c.lecturer_id = auth.uid()
     )
   );
+
+
+create table announcements (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('announcement', 'news', 'insight')) default 'announcement',
+  title text not null,
+  body text,
+  image_url text,
+  created_at timestamptz default now()
+);
+
+alter table announcements enable row level security;
+
+create policy "everyone reads announcements" on announcements
+  for select using (true);
+
+create policy "admin manages announcements" on announcements
+  for all using (
+    exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
+  );

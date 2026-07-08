@@ -52,6 +52,13 @@ const db = {
     { id: "asn-1", course_id: "crs-1", title: "Assignment 1 — Nodal analysis", description: "Solve problems 1–8 from chapter 3.", deadline: iso(Date.now() + 3 * 864e5), created_at: iso(Date.now() - 2 * 864e5) },
     { id: "asn-2", course_id: "crs-2", title: "Lab report — Flip-flops", description: "Write up the D/JK flip-flop lab.", deadline: iso(Date.now() + 7 * 864e5), created_at: iso(Date.now() - 1 * 864e5) },
   ],
+  // image_url uses dev-served source paths; the mock is dev-only so these
+  // resolve under Vite. Leave null to show the card's image placeholder.
+  announcements: [
+    { id: "ann-1", type: "news", title: "Departmental Week 2026 announced", body: "The Department of Computer Engineering will hold its annual week from March 3–7, featuring project exhibitions, a hackathon and an alumni mixer.", image_url: "/src/assets/group-photo-1.jpeg", created_at: iso(Date.now() - 1 * 864e5) },
+    { id: "ann-2", type: "announcement", title: "Second-semester registration now open", body: "Course registration for the second semester closes on February 20. Late registration attracts a penalty — register early through the portal.", image_url: "/src/assets/group-photo-2.jpg", created_at: iso(Date.now() - 3 * 864e5) },
+    { id: "ann-3", type: "insight", title: "Why FPGAs matter for your final-year project", body: "A short read on how reconfigurable hardware is shaping modern embedded systems and where to start experimenting.", image_url: null, created_at: iso(Date.now() - 5 * 864e5) },
+  ],
 };
 
 // classes and assignments both carry a joined `courses` object in the real

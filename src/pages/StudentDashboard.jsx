@@ -7,6 +7,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useStudentSchedule } from "../hooks/useStudentSchedule";
 import { useStudentAssignments } from "../hooks/useStudentAssignments";
+import { useNews } from "../hooks/useNews";
 import DashboardLayout from "../components/dashboard/DashboardLayout";
 import AttendanceCheckIn from "../components/dashboard/AttendanceCheckIn";
 import GridBackground from "../components/ui/GridBackground";
@@ -257,10 +258,42 @@ function ComplaintForm() {
 }
 
 function NewsView() {
+  const { news, loading } = useNews();
+
+  if (loading) return <p className="text-sm text-gray-400">Loading...</p>;
+
+  if (news.length === 0) {
+    return (
+      <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
+        <IconNews size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
+        <p className="text-gray-400">No news yet</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-3xl border border-gray-100 p-10 sm:p-16 flex flex-col items-center text-center">
-      <IconNews size={32} className="text-gray-200 mb-4" strokeWidth={1.5} />
-      <p className="text-gray-400">No news yet</p>
+    <div className="grid sm:grid-cols-2 gap-6">
+      {news.map((n) => (
+        <article key={n.id} className="rounded-3xl border border-gray-100 overflow-hidden flex flex-col">
+          <div className="aspect-[16/9] bg-gray-100 shrink-0">
+            {n.image_url ? (
+              <img src={n.image_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <IconNews size={28} className="text-gray-300" strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+          <div className="p-6 flex-1">
+            <span className="text-xs uppercase tracking-wide text-brand-greenDark font-medium">{n.type}</span>
+            <h3 className="text-base font-medium mt-1">{n.title}</h3>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">{n.body}</p>
+            <p className="text-xs text-gray-400 mt-4">
+              {new Date(n.created_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+            </p>
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
