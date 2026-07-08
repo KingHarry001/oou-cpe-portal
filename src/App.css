@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-black: #0A0A0A;
+  --color-brand-green: #22C55E;
+  --color-brand-greenDark: #16A34A;
+}
+
+@theme {
+  --font-voice: "Instrument Serif", serif;
+}

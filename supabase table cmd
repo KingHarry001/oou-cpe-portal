@@ -1,0 +1,86 @@
+create table users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text not null,
+  email text not null unique,
+  role text not null check (role in ('student', 'lecturer', 'admin')) default 'student',
+  status text not null check (status in ('active', 'banned')) default 'active',
+  level text,
+  department text default 'Computer Engineering',
+  created_at timestamptz default now()
+);
+
+alter table users enable row level security;
+
+-- everyone can read their own row
+create policy "read own profile" on users
+  for select using (auth.uid() = id);
+
+-- admins can read every row
+create policy "admin reads all" on users
+  for select using (
+    exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
+  );
+
+-- admins can update any row (for banning)
+create policy "admin updates all" on users
+  for update using (
+    exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
+  );
+
+-- a new signed-up user can insert their own row once
+create policy "insert own profile" on users
+  for insert with check (auth.uid() = id);
+
+create policy "school email only" on users
+  for insert with check (email like '%@oouagoiwoye.edu.ng');
+
+create table attendance_records (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references attendance_sessions(id) on delete cascade,
+  student_id uuid not null references users(id) on delete cascade,
+  marked_at timestamptz default now(),
+  unique (session_id, student_id)
+);
+
+alter table attendance_records enable row level security;
+
+create policy "student inserts own record" on attendance_records
+  for insert with check (auth.uid() = student_id);
+
+create policy "student reads own record" on attendance_records
+  for select using (auth.uid() = student_id);
+
+create policy "lecturer reads records for own sessions" on attendance_records
+  for select using (
+    exists (
+      select 1 from attendance_sessions s
+      join classes c on c.id = s.class_id
+      where s.id = attendance_records.session_id
+      and c.lecturer_id = auth.uid()
+    )
+  );
+
+create table courses (
+  id uuid primary key default gen_random_uuid(),
+  code text not null,          -- e.g. "CPE 301"
+  title text not null,         -- e.g. "Digital Logic Design"
+  level text not null,         -- "100", "200", "300", "400", "500"
+  lecturer_id uuid references users(id),
+  created_at timestamptz default now()
+);
+
+alter table classes
+  add column if not exists course_id uuid references courses(id) on delete cascade;
+
+alter table courses enable row level security;
+
+create policy "everyone reads courses" on courses
+  for select using (true);
+
+create policy "lecturer manages own courses" on courses
+  for all using (auth.uid() = lecturer_id);
+
+create policy "admin manages all courses" on courses
+  for all using (
+    exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin')
+  );
