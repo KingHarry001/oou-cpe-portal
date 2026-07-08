@@ -1,8 +1,7 @@
 // src/components/dashboard/DashboardLayout.jsx
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { IconLogout } from "@tabler/icons-react";
 import { useAuth } from "../../context/AuthContext";
-import { fadeUp } from "../../lib/motion";
 import MobileNav from "./MobileNav";
 import TabNav from "./TabNav";
 import oouCrest from "../../assets/oou-crest.jpg";
@@ -50,11 +49,17 @@ export default function DashboardLayout({ tabs, active, setActive, portalLabel, 
           <h1 className="text-2xl font-medium">{title}</h1>
         </header>
 
-        <AnimatePresence mode="wait">
-          <motion.div key={active} initial="hidden" animate="show" exit="exit" variants={fadeUp}>
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        {/* Keyed remount + enter-only animation: swapping panels must not
+            depend on an exit animation completing (AnimatePresence mode="wait"
+            can stall in production builds and freeze the active panel). */}
+        <motion.div
+          key={active}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
       </main>
     </div>
   );
