@@ -11,45 +11,45 @@ export default function AttendanceCheckIn({ classId }) {
   const intervalRef = useRef(null);
 
   useEffect(() => {
+    const loadOpenSession = async () => {
+      const now = new Date().toISOString();
+      const { data } = await supabase
+        .from("attendance_sessions")
+        .select("id, closes_at, is_test")
+        .eq("class_id", classId)
+        .lte("opens_at", now)
+        .gte("closes_at", now)
+        .order("opens_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!data) {
+        setStatus("none");
+        return;
+      }
+
+      setSession(data);
+
+      const { data: existing } = await supabase
+        .from("attendance_records")
+        .select("id")
+        .eq("session_id", data.id)
+        .eq("student_id", profile.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Nothing left to poll for once the student is marked present.
+        clearInterval(intervalRef.current);
+        setStatus("checked-in");
+      } else {
+        setStatus("open");
+      }
+    };
+
     loadOpenSession();
     intervalRef.current = setInterval(loadOpenSession, 15000); // re-poll every 15s
     return () => clearInterval(intervalRef.current);
-  }, [classId]);
-
-  const loadOpenSession = async () => {
-    const now = new Date().toISOString();
-    const { data } = await supabase
-      .from("attendance_sessions")
-      .select("id, closes_at, is_test")
-      .eq("class_id", classId)
-      .lte("opens_at", now)
-      .gte("closes_at", now)
-      .order("opens_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!data) {
-      setStatus("none");
-      return;
-    }
-
-    setSession(data);
-
-    const { data: existing } = await supabase
-      .from("attendance_records")
-      .select("id")
-      .eq("session_id", data.id)
-      .eq("student_id", profile.id)
-      .maybeSingle();
-
-    if (existing) {
-      // Nothing left to poll for once the student is marked present.
-      clearInterval(intervalRef.current);
-      setStatus("checked-in");
-    } else {
-      setStatus("open");
-    }
-  };
+  }, [classId, profile.id]);
 
   const checkIn = async () => {
     const { error } = await supabase.from("attendance_records").insert({

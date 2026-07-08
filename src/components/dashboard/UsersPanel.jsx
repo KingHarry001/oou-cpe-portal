@@ -9,17 +9,16 @@ export default function UsersPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadUsers = async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("id, full_name, role, status")
+        .order("full_name");
+      setUsers(data || []);
+      setLoading(false);
+    };
     loadUsers();
   }, []);
-
-  const loadUsers = async () => {
-    const { data } = await supabase
-      .from("users")
-      .select("id, full_name, role, status")
-      .order("full_name");
-    setUsers(data || []);
-    setLoading(false);
-  };
 
   const toggleBan = async (id, status) => {
     const newStatus = status === "banned" ? "active" : "banned";

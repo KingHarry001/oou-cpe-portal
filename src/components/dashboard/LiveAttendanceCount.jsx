@@ -8,6 +8,13 @@ export default function LiveAttendanceCount({ session, totalStudents }) {
   useEffect(() => {
     if (!session) return;
 
+    const loadCount = async () => {
+      const { count: c } = await supabase
+        .from("attendance_records")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", session.id);
+      setCount(c || 0);
+    };
     loadCount();
 
     const channel = supabase
@@ -21,14 +28,6 @@ export default function LiveAttendanceCount({ session, totalStudents }) {
 
     return () => supabase.removeChannel(channel);
   }, [session]);
-
-  const loadCount = async () => {
-    const { count: c } = await supabase
-      .from("attendance_records")
-      .select("*", { count: "exact", head: true })
-      .eq("session_id", session.id);
-    setCount(c || 0);
-  };
 
   const closesIn = Math.max(0, Math.floor((new Date(session.closes_at) - new Date()) / 60000));
 

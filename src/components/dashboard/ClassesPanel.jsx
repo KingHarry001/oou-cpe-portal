@@ -20,26 +20,25 @@ export default function ClassesPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadData = async () => {
+      // Both reads key off the lecturer's courses; fetch them in parallel
+      // rather than waiting on the course list just to build the classes
+      // query. The separate courses read still surfaces courses that have no
+      // classes yet (needed for the dropdown).
+      const [{ data: courseData }, { data: classData }] = await Promise.all([
+        supabase.from("courses").select("id, code, title").eq("lecturer_id", profile.id),
+        supabase
+          .from("classes")
+          .select("*, courses!inner(code, title)")
+          .eq("courses.lecturer_id", profile.id),
+      ]);
+
+      setCourses(courseData || []);
+      setClasses(classData || []);
+      setLoading(false);
+    };
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    // Both reads key off the lecturer's courses; fetch them in parallel rather
-    // than waiting on the course list just to build the classes query. The
-    // separate courses read still surfaces courses that have no classes yet
-    // (needed for the dropdown).
-    const [{ data: courseData }, { data: classData }] = await Promise.all([
-      supabase.from("courses").select("id, code, title").eq("lecturer_id", profile.id),
-      supabase
-        .from("classes")
-        .select("*, courses!inner(code, title)")
-        .eq("courses.lecturer_id", profile.id),
-    ]);
-
-    setCourses(courseData || []);
-    setClasses(classData || []);
-    setLoading(false);
-  };
+  }, [profile.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
