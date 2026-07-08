@@ -16,7 +16,10 @@ export function AuthProvider({ children }) {
       else setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // getSession() above already handles the initial load; skip the
+      // duplicate INITIAL_SESSION event to avoid fetching the profile twice.
+      if (event === "INITIAL_SESSION") return;
       setSession(session);
       if (session) loadProfile(session.user.id);
       else {
@@ -34,8 +37,10 @@ export function AuthProvider({ children }) {
     setLoading(false);
   };
 
+  const signOut = () => supabase.auth.signOut();
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading }}>
+    <AuthContext.Provider value={{ session, profile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

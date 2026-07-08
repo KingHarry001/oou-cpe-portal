@@ -1,12 +1,12 @@
 // src/pages/Landing.jsx
 import { Link } from "react-router-dom";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { useInView } from "framer-motion";
 import {
   IconCalendarEvent, IconMessageCircle, IconNews,
   IconPlayerPlayFilled, IconUsers, IconChalkboard, IconShieldCheck,
 } from "@tabler/icons-react";
+import GridBackground from "../components/ui/GridBackground";
 import oouCrest from "../assets/oou-crest.jpg";
 import groupPhoto1 from "../assets/group-photo-1.jpeg";
 import groupPhoto2 from "../assets/group-photo-2.jpg";
@@ -26,8 +26,9 @@ const staggerContainer = {
   show: { transition: { staggerChildren: 0.12 } },
 };
 
-function AnimatedNumber({ value, suffix = "" }) {
+function AnimatedNumber({ value }) {
   const numeric = parseInt(value.replace(/[^0-9]/g, ""), 10);
+  const suffix = value.replace(/[0-9,]/g, ""); // keep the non-numeric tail ("+", "%")
   const [display, setDisplay] = useState(0);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.5 });
@@ -77,16 +78,9 @@ export default function Landing() {
         initial="hidden"
         animate="show"
         variants={fadeUp}
-        className="mx-4 md:mx-16 rounded-[32px] bg-[#0A0A0A] text-white px-6 md:px-10 pt-28 pb-24 text-center overflow-hidden relative"
+        className="mx-4 md:mx-16 rounded-[32px] bg-brand-black text-white px-6 md:px-10 pt-28 pb-24 text-center overflow-hidden relative"
       >
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
+        <GridBackground />
         <img src={oouCrest} alt="" aria-hidden="true" className="absolute -right-16 -top-16 w-72 h-72 object-contain opacity-[0.06] pointer-events-none" />
 
         <span className="relative inline-flex items-center gap-1.5 border border-white/15 rounded-full px-4 py-1.5 text-xs text-white/60 mb-10">
@@ -134,7 +128,7 @@ export default function Landing() {
             className={`text-center py-14 ${i < 2 ? "sm:border-r border-gray-100" : ""}`}
           >
             <p className="text-5xl md:text-6xl font-medium tracking-tight">
-              <AnimatedNumber value={stat} suffix={stat.includes("%") ? "%" : stat.includes("+") ? "+" : ""} />
+              <AnimatedNumber value={stat} />
             </p>
             <p className="text-base text-gray-500 mt-3">{label}</p>
           </motion.div>
@@ -220,7 +214,6 @@ export default function Landing() {
               key={label}
               variants={fadeUp}
               className="relative rounded-[28px] overflow-hidden aspect-video group text-left"
-              onClick={() => {/* open modal / navigate to video */}}
             >
               <motion.img
                 src={thumb}

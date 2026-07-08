@@ -2,14 +2,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IconMenu2, IconX, IconLogout } from "@tabler/icons-react";
-import { supabase } from "../../lib/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
+import TabNav from "./TabNav";
 import oouCrest from "../../assets/oou-crest.jpg";
 
-export default function MobileNav({ tabs, active, setActive, profile, portalLabel }) {
+export default function MobileNav({ tabs, active, setActive, portalLabel }) {
+  const { profile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const selectTab = (key) => {
+    setActive(key);
+    setOpen(false);
   };
 
   return (
@@ -50,23 +53,7 @@ export default function MobileNav({ tabs, active, setActive, profile, portalLabe
                     <IconX size={20} strokeWidth={1.75} />
                   </button>
                 </div>
-                <nav className="flex flex-col gap-1">
-                  {tabs.map(({ key, label, icon: Icon }) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setActive(key);
-                        setOpen(false);
-                      }}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition text-left ${
-                        active === key ? "bg-[#0A0A0A] text-white" : "text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Icon size={18} strokeWidth={1.75} />
-                      {label}
-                    </button>
-                  ))}
-                </nav>
+                <TabNav tabs={tabs} active={active} onSelect={selectTab} />
               </div>
 
               <div className="flex items-center gap-3 px-2 py-3 border-t border-gray-100">

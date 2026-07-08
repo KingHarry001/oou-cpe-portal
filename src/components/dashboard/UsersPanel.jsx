@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { IconUsers } from "@tabler/icons-react";
 import { supabase } from "../../lib/supabaseClient";
+import EmptyState from "../ui/EmptyState";
 
 export default function UsersPanel() {
   const [users, setUsers] = useState([]);
@@ -12,7 +13,10 @@ export default function UsersPanel() {
   }, []);
 
   const loadUsers = async () => {
-    const { data } = await supabase.from("users").select("*").order("full_name");
+    const { data } = await supabase
+      .from("users")
+      .select("id, full_name, role, status")
+      .order("full_name");
     setUsers(data || []);
     setLoading(false);
   };
@@ -28,10 +32,7 @@ export default function UsersPanel() {
   return (
     <div className="rounded-3xl border border-gray-100 overflow-hidden">
       {users.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <IconUsers size={28} className="text-gray-200 mb-3" strokeWidth={1.5} />
-          <p className="text-sm text-gray-400">No users yet</p>
-        </div>
+        <EmptyState icon={IconUsers} label="No users yet" className="py-16" />
       ) : (
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-400">

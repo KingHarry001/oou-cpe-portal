@@ -1,6 +1,7 @@
 // src/components/dashboard/AssignmentsPanel.jsx
 import { useState } from "react";
 import { IconClipboardList } from "@tabler/icons-react";
+import EmptyState from "../ui/EmptyState";
 
 export default function AssignmentsPanel() {
   const [form, setForm] = useState({
@@ -94,14 +95,7 @@ export default function AssignmentsPanel() {
       <div className="rounded-3xl border border-gray-100 p-8">
         <h2 className="text-lg font-medium mb-6">Published assignments</h2>
         {assignments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <IconClipboardList
-              size={28}
-              className="text-gray-200 mb-3"
-              strokeWidth={1.5}
-            />
-            <p className="text-sm text-gray-400">No assignments yet</p>
-          </div>
+          <EmptyState icon={IconClipboardList} label="No assignments yet" />
         ) : (
           <ul className="space-y-3">
             {assignments.map((a) => (

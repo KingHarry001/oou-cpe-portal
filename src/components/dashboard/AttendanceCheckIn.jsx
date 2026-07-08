@@ -1,5 +1,5 @@
 // src/components/dashboard/AttendanceCheckIn.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../context/AuthContext";
 
@@ -8,18 +8,19 @@ export default function AttendanceCheckIn({ classId }) {
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState("loading"); // loading | open | closed | none | checked-in
   const [message, setMessage] = useState("");
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     loadOpenSession();
-    const interval = setInterval(loadOpenSession, 15000); // re-poll every 15s
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(loadOpenSession, 15000); // re-poll every 15s
+    return () => clearInterval(intervalRef.current);
   }, [classId]);
 
   const loadOpenSession = async () => {
     const now = new Date().toISOString();
     const { data } = await supabase
       .from("attendance_sessions")
-      .select("*")
+      .select("id, closes_at, is_test")
       .eq("class_id", classId)
       .lte("opens_at", now)
       .gte("closes_at", now)
@@ -41,7 +42,13 @@ export default function AttendanceCheckIn({ classId }) {
       .eq("student_id", profile.id)
       .maybeSingle();
 
-    setStatus(existing ? "checked-in" : "open");
+    if (existing) {
+      // Nothing left to poll for once the student is marked present.
+      clearInterval(intervalRef.current);
+      setStatus("checked-in");
+    } else {
+      setStatus("open");
+    }
   };
 
   const checkIn = async () => {
@@ -56,6 +63,7 @@ export default function AttendanceCheckIn({ classId }) {
     } else {
       setMessage("Attendance marked");
     }
+    clearInterval(intervalRef.current);
     setStatus("checked-in");
   };
 
