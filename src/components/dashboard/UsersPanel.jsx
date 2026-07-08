@@ -33,7 +33,8 @@ export default function UsersPanel() {
       {users.length === 0 ? (
         <EmptyState icon={IconUsers} label="No users yet" className="py-16" />
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[480px]">
           <thead className="bg-gray-50 text-left text-gray-400">
             <tr>
               <th className="px-6 py-4 font-medium">Name</th>
@@ -68,6 +69,7 @@ export default function UsersPanel() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

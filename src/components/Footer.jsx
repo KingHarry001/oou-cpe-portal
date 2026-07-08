@@ -75,7 +75,7 @@ export default function Footer() {
         <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
           <p>© 2026 Olabisi Onabanjo University · Department of Computer Engineering</p>
           <p className="text-center md:text-right">
-            SIWES project · 2024/25 session · Built by the frontend team
+            SIWES project · 2024/25 session · Built by the Frontend Team
           </p>
         </div>
       </div>
