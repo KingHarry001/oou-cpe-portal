@@ -10,6 +10,7 @@ import Banned from "./pages/Banned";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DevAuthOverride from "./dev/DevAuthOverride";
+import { isMock } from "./lib/supabaseClient";
 
 export default function App() {
   return (
@@ -45,7 +46,7 @@ export default function App() {
           }
         />
 
-        {import.meta.env.DEV && (
+        {(import.meta.env.DEV || isMock) && (
           <>
             <Route
               path="/dev/student"
