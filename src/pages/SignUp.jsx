@@ -8,9 +8,16 @@ import { roleHome } from "../lib/roles";
 import GridBackground from "../components/ui/GridBackground";
 import oouCrest from "../assets/oou-crest.jpg";
 
+// Access code required to self-register as a lecturer, so the role can't be
+// claimed just by visiting /signup?role=lecturer. NOTE: this is a client-side
+// deterrent only — real enforcement must live in a Supabase RLS policy that
+// forbids a user from assigning themselves a non-student role.
+const LECTURER_CODE = import.meta.env.VITE_LECTURER_SIGNUP_CODE || "OOUCPE-LECT";
+
 export default function SignUp() {
-  const [form, setForm] = useState({ fullName: "", email: "", password: "" });
+  const [form, setForm] = useState({ fullName: "", email: "", password: "", lecturerCode: "" });
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -20,9 +27,15 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setMessage("");
 
     if (!form.email.endsWith("@oouagoiwoye.edu.ng")) {
       setError("Please use your school email (@oouagoiwoye.edu.ng)");
+      return;
+    }
+
+    if (role === "lecturer" && form.lecturerCode.trim() !== LECTURER_CODE) {
+      setError("Invalid lecturer access code. Contact the department admin.");
       return;
     }
 
@@ -35,6 +48,16 @@ export default function SignUp() {
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
+      return;
+    }
+
+    // With email confirmation on, signUp returns a user but no session yet, so
+    // the profile insert would be rejected by RLS (auth.uid() is null). The
+    // profile row should be created on confirm via a DB trigger — just tell the
+    // user to check their email.
+    if (!data.session) {
+      setLoading(false);
+      setMessage("Almost there — check your email to confirm your account, then sign in.");
       return;
     }
 
@@ -122,6 +145,9 @@ export default function SignUp() {
           {error && (
             <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-6">{error}</p>
           )}
+          {message && (
+            <p className="text-sm text-brand-greenDark bg-brand-green/10 rounded-xl px-4 py-3 mb-6">{message}</p>
+          )}
 
           <label className="text-sm font-medium block mb-2">Full name</label>
           <input
@@ -147,10 +173,25 @@ export default function SignUp() {
             type="password"
             required
             minLength={6}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-8 focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
+            className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green ${
+              role === "lecturer" ? "mb-5" : "mb-8"
+            }`}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
+
+          {role === "lecturer" && (
+            <>
+              <label className="text-sm font-medium block mb-2">Lecturer access code</label>
+              <input
+                required
+                placeholder="Provided by the department admin"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-8 focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green"
+                value={form.lecturerCode}
+                onChange={(e) => setForm({ ...form, lecturerCode: e.target.value })}
+              />
+            </>
+          )}
 
           <button
             disabled={loading}
