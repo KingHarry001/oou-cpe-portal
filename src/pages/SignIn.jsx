@@ -160,6 +160,33 @@ export default function SignIn() {
             Continue with Google
           </button>
 
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 mb-2.5">Demo accounts (click to fill):</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setForm({ email: "king@oouagoiwoye.edu.ng", password: "password123" })}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition cursor-pointer"
+              >
+                🎓 Student
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ email: "adeyemi@oouagoiwoye.edu.ng", password: "password123" })}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition cursor-pointer"
+              >
+                👨‍🏫 Lecturer
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ email: "admin@oouagoiwoye.edu.ng", password: "password123" })}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-full transition cursor-pointer"
+              >
+                🛡️ Admin
+              </button>
+            </div>
+          </div>
+
           <p className="text-xs text-gray-400 text-center mt-8 leading-relaxed">
             By continuing you agree to abide by the OOU code of conduct.
           </p>

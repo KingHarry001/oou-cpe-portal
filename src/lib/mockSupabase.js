@@ -166,6 +166,7 @@ class MockQuery {
   }
   insert(rows) { this._op = "insert"; this._rows = Array.isArray(rows) ? rows : [rows]; return this; }
   update(vals) { this._op = "update"; this._vals = vals; return this; }
+  delete() { this._op = "delete"; return this; }
   eq(col, val) { this.filters.push(["eq", col, val]); return this; }
   in(col, val) { this.filters.push(["in", col, val]); return this; }
   lte(col, val) { this.filters.push(["lte", col, val]); return this; }
@@ -205,6 +206,21 @@ class MockQuery {
       return this._result(null);
     }
 
+    if (this._op === "delete") {
+      db[this.table] = store.filter(
+        (row) =>
+          !this.filters.every(([op, col, val]) => {
+            const actual = readCol(row, col);
+            if (op === "eq") return actual === val;
+            if (op === "in") return val.includes(actual);
+            if (op === "lte") return actual <= val;
+            if (op === "gte") return actual >= val;
+            return true;
+          })
+      );
+      return this._result(null);
+    }
+
     // select
     let rows = needsJoin(this.table, this._select, this.filters) ? store.map((r) => hydrate(this.table, r)) : store.slice();
     rows = applyFilters(rows, this.filters);
@@ -224,7 +240,24 @@ class MockQuery {
 
 // --- client -------------------------------------------------------------------
 
-const authError = { message: "Mock mode: use the /dev routes to sign in." };
+let authSession = null;
+try {
+  const saved = typeof window !== "undefined" ? window.localStorage.getItem("oou_cpe_mock_session") : null;
+  if (saved) authSession = JSON.parse(saved);
+} catch {
+  // ignore storage errors
+}
+
+const authListeners = new Set();
+const notifyAuth = (event, session) => {
+  authListeners.forEach((cb) => {
+    try {
+      cb(event, session);
+    } catch {
+      // ignore
+    }
+  });
+};
 
 export const mockSupabase = {
   from: (table) => new MockQuery(table),
@@ -241,16 +274,107 @@ export const mockSupabase = {
     if (i !== -1) channels.splice(i, 1);
   },
   auth: {
-    getSession: async () => ({ data: { session: null } }),
+    getSession: async () => ({ data: { session: authSession } }),
     onAuthStateChange: (cb) => {
-      cb("INITIAL_SESSION", null);
-      return { data: { subscription: { unsubscribe() {} } } };
+      authListeners.add(cb);
+      return {
+        data: {
+          subscription: {
+            unsubscribe() {
+              authListeners.delete(cb);
+            },
+          },
+        },
+      };
     },
-    signInWithPassword: async () => ({ data: { user: null }, error: authError }),
-    signUp: async () => ({ data: { user: null }, error: authError }),
-    signInWithOAuth: async () => ({ data: null, error: authError }),
-    signOut: async () => ({ error: null }),
+    signInWithPassword: async ({ email }) => {
+      const normalizedEmail = (email || "").trim().toLowerCase();
+      let user = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      if (!user) {
+        user = {
+          id: uuid(),
+          full_name: (email || "User").split("@")[0].replace(/[._-]/g, " "),
+          email: normalizedEmail || "student@oouagoiwoye.edu.ng",
+          role: "student",
+          status: "active",
+          level: "200",
+        };
+        db.users.push(user);
+      }
+      if (user.status === "banned") {
+        return { data: { user: null, session: null }, error: { message: "This account has been suspended. Contact department admin." } };
+      }
+      authSession = {
+        access_token: "mock-token-" + user.id,
+        user: { id: user.id, email: user.email, user_metadata: { full_name: user.full_name } },
+      };
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("oou_cpe_mock_session", JSON.stringify(authSession));
+        }
+      } catch (e) {
+        console.warn("Could not save session to localStorage", e);
+      }
+      notifyAuth("SIGNED_IN", authSession);
+      return { data: { user: authSession.user, session: authSession }, error: null };
+    },
+    signUp: async ({ email }) => {
+      const normalizedEmail = (email || "").trim().toLowerCase();
+      let user = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+      if (!user) {
+        user = {
+          id: uuid(),
+          full_name: (email || "User").split("@")[0].replace(/[._-]/g, " "),
+          email: normalizedEmail || "student@oouagoiwoye.edu.ng",
+          role: "student",
+          status: "active",
+          level: "200",
+        };
+        db.users.push(user);
+      }
+      authSession = {
+        access_token: "mock-token-" + user.id,
+        user: { id: user.id, email: user.email, user_metadata: { full_name: user.full_name } },
+      };
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("oou_cpe_mock_session", JSON.stringify(authSession));
+        }
+      } catch (e) {
+        console.warn("Could not save session to localStorage", e);
+      }
+      notifyAuth("SIGNED_IN", authSession);
+      return { data: { user: authSession.user, session: authSession }, error: null };
+    },
+    signInWithOAuth: async () => {
+      const user = db.users[0]; // dev-student
+      authSession = {
+        access_token: "mock-token-" + user.id,
+        user: { id: user.id, email: user.email, user_metadata: { full_name: user.full_name } },
+      };
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("oou_cpe_mock_session", JSON.stringify(authSession));
+        }
+      } catch (e) {
+        console.warn("Could not save session to localStorage", e);
+      }
+      notifyAuth("SIGNED_IN", authSession);
+      return { data: { user: authSession.user, session: authSession }, error: null };
+    },
+    signOut: async () => {
+      authSession = null;
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("oou_cpe_mock_session");
+        }
+      } catch (e) {
+        console.warn("Could not clear session from localStorage", e);
+      }
+      notifyAuth("SIGNED_OUT", null);
+      return { error: null };
+    },
     resetPasswordForEmail: async () => ({ data: {}, error: null }),
-    updateUser: async () => ({ data: { user: null }, error: null }),
+    updateUser: async () => ({ data: { user: authSession?.user || null }, error: null }),
   },
 };

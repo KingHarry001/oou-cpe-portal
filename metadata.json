@@ -1,0 +1,6 @@
+{
+  "name": "OOU CPE Portal",
+  "description": "Department of Computer Engineering portal for Olabisi Onabanjo University, featuring student, lecturer, and admin portals for attendance, course resources, schedules, and announcements.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
